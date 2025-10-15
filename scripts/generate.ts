@@ -9,11 +9,7 @@ import json5 from "json5";
 import type { EmojiItem } from "../src/types/emoji";
 import { removeVariationSelector } from "./helpers/removeVariationSelector";
 
-const EMOTICONS_DISABLED = true;
-const FALLBACKS_DISABLED = true;
-const GITHUB_DISABLED = true;
-const TAGS_DISABLED = true;
-const VERSIONS_DISABLED = true;
+type OutFile = "data" | "data_tags" | "data_all";
 
 /**
  * Filters tags to reduce file size while maintaining search utility.
@@ -59,93 +55,100 @@ function filterTags(
   });
 }
 
-const emojis: EmojiItem[] = data
-  .filter((emoji) => emoji.version > 0 && emoji.version < 14)
-  .map((emoji) => {
-    const dataSourceEmoji = dataSource.find((item) => {
-      return (
-        item.unified === emoji.hexcode || item.non_qualified === emoji.hexcode
-      );
+function writeFile(out_file: OutFile = "data") {
+  const EMOTICONS_DISABLED = out_file !== "data_all";
+  const FALLBACKS_DISABLED = true;
+  const GITHUB_DISABLED = true;
+  const TAGS_DISABLED = out_file === "data";
+  const VERSIONS_DISABLED = out_file !== "data_all";
+
+  const emojis: EmojiItem[] = data
+    .filter((emoji) => emoji.version > 0 && emoji.version < 14)
+    .map((emoji) => {
+      const dataSourceEmoji = dataSource.find((item) => {
+        return (
+          item.unified === emoji.hexcode || item.non_qualified === emoji.hexcode
+        );
+      });
+      const hasFallbackImage = dataSourceEmoji?.has_img_apple;
+
+      const name =
+        [gitHubShortcodes[emoji.hexcode]].flat()[0] ||
+        [emojibaseShortcodes[emoji.hexcode]].flat()[0]!;
+      const shortcodes = emojibaseShortcodes[emoji.hexcode]
+        ? [emojibaseShortcodes[emoji.hexcode]!].flat()
+        : [];
+      const emoticons = emoji.emoticon ? [emoji.emoticon].flat() : [];
+
+      let tags = emoji.tags
+        ? filterTags(emoji.tags, shortcodes, name)
+        : undefined;
+      if (!tags?.length) {
+        tags = undefined;
+      }
+
+      return {
+        emoji: removeVariationSelector(emoji.emoji),
+        name,
+        shortcodes,
+
+        tags: TAGS_DISABLED ? undefined : tags,
+
+        group: emoji.group
+          ? (messages.groups[emoji.group]?.message ?? "")
+          : undefined,
+
+        emoticons: EMOTICONS_DISABLED
+          ? undefined
+          : emoticons.length > 0
+            ? emoticons
+            : undefined,
+
+        version: VERSIONS_DISABLED ? undefined : emoji.version,
+
+        fallbackImage: FALLBACKS_DISABLED
+          ? undefined
+          : hasFallbackImage
+            ? `https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/${dataSourceEmoji.image}`
+            : undefined,
+      };
     });
-    const hasFallbackImage = dataSourceEmoji?.has_img_apple;
 
-    const name =
-      [gitHubShortcodes[emoji.hexcode]].flat()[0] ||
-      [emojibaseShortcodes[emoji.hexcode]].flat()[0]!;
-    const shortcodes = emojibaseShortcodes[emoji.hexcode]
-      ? [emojibaseShortcodes[emoji.hexcode]!].flat()
-      : [];
-    const emoticons = emoji.emoticon ? [emoji.emoticon].flat() : [];
+  // #region - GitHub
 
-    let tags = emoji.tags
-      ? filterTags(emoji.tags, shortcodes, name)
-      : undefined;
-    if (!tags?.length) {
-      tags = undefined;
-    }
+  const gitHubCustomEmojiNames = [
+    // "atom",
+    // "basecamp",
+    // "basecampy",
+    "bowtie",
+    // "electron",
+    "feelsgood",
+    // "finnadie",
+    // "goberserk",
+    // "godmode",
+    // "hurtrealbad",
+    // "neckbeard",
+    // "octocat",
+    "rage1",
+    "rage2",
+    "rage3",
+    "rage4",
+    "shipit",
+    "suspect",
+    "trollface",
+  ];
 
+  const gitHubCustomEmojis: EmojiItem[] = gitHubCustomEmojiNames.map((name) => {
     return {
-      emoji: removeVariationSelector(emoji.emoji),
       name,
-      shortcodes,
-
-      tags: TAGS_DISABLED ? undefined : tags,
-
-      group: emoji.group
-        ? (messages.groups[emoji.group]?.message ?? "")
-        : undefined,
-
-      emoticons: EMOTICONS_DISABLED
-        ? undefined
-        : emoticons.length > 0
-          ? emoticons
-          : undefined,
-
-      version: VERSIONS_DISABLED ? undefined : emoji.version,
-
-      fallbackImage: FALLBACKS_DISABLED
-        ? undefined
-        : hasFallbackImage
-          ? `https://cdn.jsdelivr.net/npm/emoji-datasource-apple/img/apple/64/${dataSourceEmoji.image}`
-          : undefined,
+      shortcodes: [name],
+      tags: [],
+      group: "GitHub",
+      fallbackImage: `https://github.githubassets.com/images/icons/emoji/${name}.png`,
     };
   });
 
-// #region - GitHub
-
-const gitHubCustomEmojiNames = [
-  // "atom",
-  // "basecamp",
-  // "basecampy",
-  "bowtie",
-  // "electron",
-  "feelsgood",
-  // "finnadie",
-  // "goberserk",
-  // "godmode",
-  // "hurtrealbad",
-  // "neckbeard",
-  // "octocat",
-  "rage1",
-  "rage2",
-  "rage3",
-  "rage4",
-  "shipit",
-  "suspect",
-  "trollface",
-];
-
-const gitHubCustomEmojis: EmojiItem[] = gitHubCustomEmojiNames.map((name) => {
-  return {
-    name,
-    shortcodes: [name],
-    tags: [],
-    group: "GitHub",
-    fallbackImage: `https://github.githubassets.com/images/icons/emoji/${name}.png`,
-  };
-});
-
-const content_github = `// This is a generated file
+  const content_github = `// This is a generated file
 
 import type { EmojiItem } from "./types/emoji";
 
@@ -155,17 +158,22 @@ export const gitHubCustomEmojis: EmojiItem[] = ${json5.stringify(gitHubCustomEmo
 
 export const gitHubEmojis: EmojiItem[] = [...emojis, ...gitHubCustomEmojis];
 `;
-// #endregion
+  // #endregion
 
-const content = `// This is a generated file
+  const content = `// This is a generated file
 
 import type { EmojiItem } from "./types/emoji";
 
 export const emojis: EmojiItem[] = ${json5.stringify(emojis, { space: 2, quote: '"' })};
 `;
 
-if (GITHUB_DISABLED) {
-  fs.writeFileSync("./src/data.ts", content);
-} else {
-  fs.writeFileSync("./src/data.ts", content_github);
+  if (GITHUB_DISABLED) {
+    fs.writeFileSync(`./src/${out_file}.ts`, content);
+  } else {
+    fs.writeFileSync(`./src/${out_file}.ts`, content_github);
+  }
 }
+
+writeFile("data");
+writeFile("data_all");
+writeFile("data_tags");

@@ -10,10 +10,14 @@ export default defineConfig({
     // assetsInlineLimit: 0, // Consider if CSS gets inline?
     minify: "esbuild",
     lib: {
-      entry: resolve(__dirname, "./src/index.ts"),
+      entry: [
+        resolve(__dirname, "./src/data.ts"),
+        resolve(__dirname, "./src/data_all.ts"),
+        resolve(__dirname, "./src/data_tags.ts"),
+      ],
       name: "e-moji",
       formats: ["es"],
-      fileName: "index",
+      // fileName: "index",
     },
     // rollupOptions: {
     //   external: [
