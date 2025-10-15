@@ -1,6 +1,6 @@
 # e-moji
 
-A small set of emoji data. Currently `164.59 kB | gzip: 25.61 kB`
+A small set of emoji data. Currently `162.43 kB | gzip: 25.37 kB`
 
 Maintained to be compatible with a custom, forked version of
 `@tiptap/extension-emoji`, one which can use:
