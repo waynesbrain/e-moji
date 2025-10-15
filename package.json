@@ -15,13 +15,18 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": {
-        "import": "./dist/index.d.ts"
-      },
-      "import": "./dist/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/data.js"
+    },
+    "./data_all": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/data_all.js"
+    },
+    "./data_tags": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/data_tags.js"
     }
   },
-  "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -29,7 +34,7 @@
   ],
   "scripts": {
     "dev": "vite build --watch",
-    "build": "npm run generate && tsc -b && vite build",
+    "build": "tsc -b && vite build && shx mv dist/data.d.ts dist/index.d.ts && shx rm dist/data*.d.ts",
     "generate": "tsx ./scripts/generate.ts && prettier --write ./src/data*.ts",
     "format": "prettier --write \"./{scripts,src}/**/*.{css,js,jsx,scss,ts,tsx}\"",
     "lint": "eslint .",
@@ -45,6 +50,7 @@
     "globals": "^16.3.0",
     "json5": "^2.2.3",
     "prettier": "^3.6.2",
+    "shx": "^0.4.0",
     "tsx": "^4.20.6",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
